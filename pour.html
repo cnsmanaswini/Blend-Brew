@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pour — build your drink</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --oat:#F5EFE3;
+    --oat-2:#ECE1CC;
+    --card:#FFFDF8;
+    --espresso:#2B1E15;
+    --espresso-2:#5A4634;
+    --sage:#8CA084;
+    --sage-dark:#546B4E;
+    --brown:#8A5A34;
+    --brown-dark:#5E3B1F;
+    --line: rgba(43,30,21,0.13);
+    --line-strong: rgba(43,30,21,0.26);
+    --accent: var(--sage);
+    --accent-dark: var(--sage-dark);
+  }
+  [data-mode="dark"]{
+    --oat:#221B15;
+    --oat-2:#2C2319;
+    --card:#2A221A;
+    --espresso:#F3EAD9;
+    --espresso-2:#CBB99F;
+    --line: rgba(243,234,217,0.12);
+    --line-strong: rgba(243,234,217,0.24);
+  }
+  [data-season="autumn"]{ --accent:#B5622D; --accent-dark:#7A3E17; }
+  [data-season="winter"]{ --accent:#5B7C99; --accent-dark:#3A5468; }
+  [data-season="sakura"]{ --accent:#D98EA1; --accent-dark:#A85469; }
+  [data-season="summer"]{ --accent:#D9A441; --accent-dark:#96701F; }
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--oat);color:var(--espresso);font-family:'Inter',sans-serif;transition:background .4s ease,color .4s ease;}
+  .voice{font-family:'Fraunces',serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* LOADING SCREEN */
+  #loader{position:fixed;inset:0;background:var(--oat);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .6s ease, visibility .6s ease;}
+  #loader.hide{opacity:0;visibility:hidden;}
+  .pour-cup{width:90px;height:110px;position:relative;}
+  .pour-cup svg{width:100%;height:100%;}
+  .pour-stream{transform-origin:top center;animation:stream 1.6s ease-in-out infinite;}
+  @keyframes stream{0%{transform:scaleY(0);opacity:0;}20%{opacity:1;}60%{transform:scaleY(1);}100%{transform:scaleY(1);opacity:0;}}
+  .fill-anim{animation:fillup 1.8s ease-in-out infinite;}
+  @keyframes fillup{0%{height:0;y:98;}55%{height:58px;y:46;}100%{height:58px;y:46;}}
+  .loader-text{font-family:'Fraunces',serif;font-size:16px;color:var(--espresso-2);letter-spacing:0.02em;}
+
+  /* NAV */
+  nav{display:flex;align-items:center;justify-content:space-between;padding:22px 32px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--oat);z-index:50;}
+  .logo{font-family:'Fraunces',serif;font-weight:600;font-size:22px;letter-spacing:-0.01em;}
+  .nav-right{display:flex;align-items:center;gap:18px;}
+  .season-picker{display:flex;gap:6px;background:var(--oat-2);padding:5px;border-radius:999px;}
+  .season-btn{width:32px;height:32px;border-radius:50%;border:1px solid transparent;background:transparent;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .season-btn.active{background:var(--card);border-color:var(--line-strong);}
+  .mode-toggle{border:1px solid var(--line-strong);border-radius:999px;padding:8px 16px;background:transparent;color:var(--espresso);font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;}
+
+  /* GREETING */
+  .greeting{padding:40px 32px 8px;max-width:1120px;margin:0 auto;}
+  .greeting h1{font-family:'Fraunces',serif;font-weight:500;font-size:32px;margin:0 0 6px;letter-spacing:-0.01em;}
+  .greeting p{margin:0;color:var(--espresso-2);font-size:14.5px;}
+
+  /* HERO */
+  .hero{padding:32px 32px 20px;}
+  .hero-inner{max-width:1120px;margin:0 auto;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-dark);margin-bottom:16px;}
+  h2.headline{font-family:'Fraunces',serif;font-weight:500;font-size:44px;line-height:1.08;letter-spacing:-0.01em;margin:0 0 20px;}
+  .lede{font-size:16.5px;line-height:1.6;color:var(--espresso-2);max-width:520px;margin:0 0 28px;}
+  .btn-primary{background:var(--accent);color:#fff;border:none;border-radius:999px;padding:13px 24px;font-size:14.5px;font-weight:500;cursor:pointer;}
+  .btn-ghost{background:transparent;color:var(--espresso);border:1px solid var(--line-strong);border-radius:999px;padding:13px 24px;font-size:14.5px;font-weight:500;cursor:pointer;margin-left:10px;}
+
+  /* BUILDER (full section) */
+  .section{padding:52px 32px;}
+  .section-head{max-width:1120px;margin:0 auto 36px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;}
+  h2{font-family:'Fraunces',serif;font-weight:500;font-size:30px;margin:0;letter-spacing:-0.01em;}
+  .section-note{max-width:340px;font-size:14px;color:var(--espresso-2);line-height:1.6;margin:0;}
+
+  .builder-wrap{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:300px 1fr;gap:0;border:1px solid var(--line);border-radius:22px;background:var(--card);overflow:hidden;}
+  .glass-panel{padding:36px 28px;display:flex;flex-direction:column;align-items:center;gap:14px;border-right:1px solid var(--line);background:var(--oat-2);position:sticky;top:78px;align-self:start;}
+  svg#glass{width:130px;height:220px;overflow:visible;}
+  .glass-label{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--espresso-2);text-align:center;line-height:1.5;}
+  #layers rect{transition:y .5s cubic-bezier(.4,0,.2,1), height .5s cubic-bezier(.4,0,.2,1), fill .5s ease, opacity .3s ease;}
+  #foam-cap{transition:opacity .3s ease;}
+  #whip-cap{transition:opacity .3s ease;}
+
+  .receipt{width:100%;margin-top:6px;border-top:1px dashed var(--line-strong);padding-top:14px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--espresso-2);}
+  .receipt-row{display:flex;justify-content:space-between;padding:2px 0;}
+  .receipt-row b{color:var(--espresso);}
+  .receipt-total{display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--line-strong);font-size:14px;}
+  .receipt-total b{color:var(--espresso);font-size:16px;}
+
+  .controls-panel{padding:32px 32px 36px;}
+  .ctrl-group{margin-bottom:26px;}
+  .ctrl-group:last-child{margin-bottom:0;}
+  .ctrl-label-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .ctrl-group label{display:block;font-size:11.5px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;color:var(--espresso-2);}
+  .ctrl-value{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--accent-dark);}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;}
+  .pill{border:1px solid var(--line-strong);border-radius:999px;padding:8px 14px;font-size:13px;background:transparent;cursor:pointer;color:var(--espresso-2);transition:all .25s ease;font-family:'Inter',sans-serif;}
+  .pill.active{background:var(--espresso);color:var(--oat);border-color:var(--espresso);transform:scale(1.04);}
+  .pill:disabled{opacity:0.35;cursor:not-allowed;}
+  .pill .tag{font-size:10.5px;opacity:0.65;margin-left:4px;}
+
+  input[type="range"]{-webkit-appearance:none;width:100%;height:4px;border-radius:999px;background:var(--line-strong);outline:none;}
+  input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:3px solid var(--card);box-shadow:0 0 0 1px var(--accent);}
+  input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:3px solid var(--card);box-shadow:0 0 0 1px var(--accent);}
+
+  .stepper{display:flex;align-items:center;gap:14px;}
+  .stepper button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line-strong);background:transparent;font-size:16px;cursor:pointer;color:var(--espresso);display:flex;align-items:center;justify-content:center;line-height:1;}
+  .stepper button:hover{background:var(--oat-2);}
+  .stepper-val{font-family:'IBM Plex Mono',monospace;font-size:14px;min-width:16px;text-align:center;}
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;}
+  .switch{width:42px;height:24px;border-radius:999px;background:var(--line-strong);position:relative;cursor:pointer;border:none;flex-shrink:0;}
+  .switch::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:var(--card);top:3px;left:3px;transition:left .25s ease;}
+  .switch.on{background:var(--accent);}
+  .switch.on::after{left:21px;}
+  .toggle-label{font-size:13.5px;color:var(--espresso);}
+  .toggle-sub{font-size:11.5px;color:var(--espresso-2);}
+
+  .helper{font-size:12px;color:var(--espresso-2);margin-top:8px;line-height:1.5;}
+
+  .ai-note{margin-top:24px;background:var(--oat-2);border-radius:14px;padding:14px 16px;font-size:12.5px;color:var(--espresso-2);line-height:1.55;display:flex;gap:10px;}
+  .ai-note b{color:var(--espresso);}
+
+  /* DRINK CARDS */
+  .cards{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  .card{border:1px solid var(--line);border-radius:18px;padding:22px;background:var(--card);transition:transform .3s ease;}
+  .card:hover{transform:translateY(-4px);}
+  .card svg{width:64px;height:64px;margin-bottom:12px;}
+  .card h4{font-family:'Fraunces',serif;font-size:18px;margin:0 0 6px;font-weight:500;}
+  .card p{margin:0 0 16px;font-size:13.5px;color:var(--espresso-2);line-height:1.5;}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--accent-dark);font-family:'IBM Plex Mono',monospace;}
+  .reorder{border:1px solid var(--line-strong);background:transparent;border-radius:999px;padding:7px 13px;font-size:12.5px;cursor:pointer;color:var(--espresso);}
+
+  /* AMBIENCE */
+  .ambience{max-width:1120px;margin:0 auto;background:var(--oat-2);border-radius:20px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;}
+  .ambience-left{display:flex;align-items:center;gap:14px;}
+  .ambience h3{font-family:'Fraunces',serif;font-size:18px;margin:0 0 4px;font-weight:500;}
+  .ambience p{margin:0;font-size:13px;color:var(--espresso-2);}
+  .sound-toggle{border:1px solid var(--line-strong);border-radius:999px;padding:9px 18px;background:var(--card);font-size:13px;cursor:pointer;color:var(--espresso);}
+
+  footer{border-top:1px solid var(--line-strong);padding:28px;text-align:center;font-size:13px;color:var(--espresso-2);}
+
+  @media (max-width:860px){
+    .builder-wrap{grid-template-columns:1fr;}
+    .glass-panel{border-right:none;border-bottom:1px solid var(--line);position:static;}
+    .cards{grid-template-columns:1fr;}
+    h2.headline{font-size:34px;}
+  }
+</style>
+</head>
+<body data-mode="light" data-season="autumn">
+
+<div id="loader">
+  <div class="pour-cup">
+    <svg viewBox="0 0 90 110">
+      <rect x="10" y="30" width="4" height="20" fill="#8A5A34" class="pour-stream"/>
+      <path d="M18 30 H72 L64 100 Q45 108 26 100 Z" fill="none" stroke="#2B1E15" stroke-width="3" stroke-linejoin="round"/>
+      <clipPath id="lclip"><path d="M20 32 H70 L63 98 Q45 105 27 98 Z"/></clipPath>
+      <g clip-path="url(#lclip)"><rect x="15" y="98" width="60" height="0" fill="#7A5233" class="fill-anim"/></g>
+    </svg>
+  </div>
+  <div class="loader-text">brewing your experience…</div>
+</div>
+
+<nav>
+  <div class="logo">Pour</div>
+  <div class="nav-right">
+    <div class="season-picker" id="seasonPicker">
+      <button class="season-btn active" data-season="autumn" title="Autumn">🍂</button>
+      <button class="season-btn" data-season="winter" title="Winter">❄️</button>
+      <button class="season-btn" data-season="sakura" title="Sakura">🌸</button>
+      <button class="season-btn" data-season="summer" title="Summer">☀️</button>
+    </div>
+    <button class="mode-toggle" id="modeToggle">Dark mode</button>
+  </div>
+</nav>
+
+<div class="greeting">
+  <h1 id="greetingText">Good evening, Manaswini ☕</h1>
+  <p>Your usual half-sweet oat matcha is one tap away.</p>
+</div>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Your cup, your rules</div>
+    <h2 class="headline">Every drink,<br>built to your taste.</h2>
+    <p class="lede">Coffee, tea, matcha, smoothies, milkshakes, hot chocolate, or refreshers — dial in size, temperature, sweetness, milk, strength, syrups, toppings, and foam, then watch it fill in real time.</p>
+    <div>
+      <button class="btn-primary" onclick="document.getElementById('builderSection').scrollIntoView({behavior:'smooth'})">Build a drink</button>
+      <button class="btn-ghost">See recommendations</button>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="builderSection">
+  <div class="section-head">
+    <div>
+      <div class="eyebrow">Full customization</div>
+      <h2>Build it exactly your way</h2>
+    </div>
+    <p class="section-note">Every option updates the glass, the nutrition line, and the price live — no surprises at pickup.</p>
+  </div>
+
+  <div class="builder-wrap">
+    <div class="glass-panel">
+      <svg id="glass" viewBox="0 0 120 230">
+        <path d="M18 8 H102 L92 190 Q60 202 28 190 Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" style="color:var(--espresso)"/>
+        <clipPath id="clip"><path d="M20 10 H100 L91 188 Q60 199 29 188 Z"/></clipPath>
+        <g clip-path="url(#clip)" id="layers"></g>
+        <g id="foam-cap" style="opacity:0">
+          <ellipse cx="60" cy="18" rx="42" ry="9" fill="#F3EAD8" stroke="#D9CBAA" stroke-width="1.5"/>
+        </g>
+        <g id="whip-cap" style="opacity:0">
+          <path d="M26 14 Q60 -10 94 14 Q88 4 60 2 Q32 4 26 14 Z" fill="#FFFBF2" stroke="#E7DCC5" stroke-width="1.5"/>
+          <ellipse cx="60" cy="14" rx="36" ry="10" fill="#FFFDF9" stroke="#E7DCC5" stroke-width="1.5"/>
+        </g>
+      </svg>
+      <div class="glass-label" id="glassLabel">iced oat matcha, half sweet</div>
+
+      <div class="receipt">
+        <div class="receipt-row"><span>Calories</span><b id="rCal">110 cal</b></div>
+        <div class="receipt-row"><span>Sugar</span><b id="rSugar">9 g</b></div>
+        <div class="receipt-row"><span>Caffeine</span><b id="rCaf">55 mg</b></div>
+        <div class="receipt-total"><span>Total</span><b id="rPrice">$5.25</b></div>
+      </div>
+    </div>
+
+    <div class="controls-panel">
+
+      <div class="ctrl-group">
+        <label>Beverage</label>
+        <div class="pills" data-group="beverage">
+          <button class="pill" data-name="Coffee">Coffee</button>
+          <button class="pill" data-name="Tea">Tea</button>
+          <button class="pill active" data-name="Matcha">Matcha</button>
+          <button class="pill" data-name="Smoothie">Smoothie</button>
+          <button class="pill" data-name="Milkshake">Milkshake</button>
+          <button class="pill" data-name="Hot Chocolate">Hot Chocolate</button>
+          <button class="pill" data-name="Refreshers">Refreshers</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <label>Cup size</label>
+        <div class="pills" data-group="size">
+          <button class="pill" data-name="Small">Small</button>
+          <button class="pill active" data-name="Medium">Medium</button>
+          <button class="pill" data-name="Large">Large</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <label>Temperature</label>
+        <div class="pills" data-group="temp">
+          <button class="pill" data-name="Hot">Hot</button>
+          <button class="pill active" data-name="Iced">Iced</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="ctrl-label-row">
+          <label>Sweetness</label>
+          <span class="ctrl-value" id="sweetVal">50%</span>
+        </div>
+        <input type="range" id="sweetSlider" min="0" max="100" step="10" value="50">
+      </div>
+
+      <div class="ctrl-group">
+        <label>Ice level</label>
+        <div class="pills" data-group="ice">
+          <button class="pill" data-name="No ice">No ice</button>
+          <button class="pill" data-name="Light ice">Light</button>
+          <button class="pill active" data-name="Regular ice">Regular</button>
+          <button class="pill" data-name="Extra ice">Extra</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <label>Milk</label>
+        <div class="pills" data-group="milk">
+          <button class="pill" data-color="#EDE0C8" data-name="Oat" class="active">Oat</button>
+          <button class="pill" data-color="#F5F0E4" data-name="Dairy">Dairy</button>
+          <button class="pill" data-color="#E9E4D8" data-name="Almond">Almond</button>
+          <button class="pill" data-color="#EFE7D6" data-name="Soy">Soy</button>
+          <button class="pill" data-color="#F0E9DA" data-name="Coconut">Coconut</button>
+          <button class="pill" data-color="transparent" data-name="None">None</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group" id="strengthGroup">
+        <label>Coffee strength</label>
+        <div class="pills" data-group="strength">
+          <button class="pill" data-name="Mild">Mild</button>
+          <button class="pill active" data-name="Regular">Regular</button>
+          <button class="pill" data-name="Strong">Strong</button>
+          <button class="pill" data-name="Extra bold">Extra bold</button>
+        </div>
+        <p class="helper" id="strengthHelper"></p>
+      </div>
+
+      <div class="ctrl-group">
+        <label>Flavor syrups <span class="ctrl-value">(pick any)</span></label>
+        <div class="pills" data-group="syrups" data-multi="true">
+          <button class="pill" data-name="Vanilla">Vanilla</button>
+          <button class="pill" data-name="Caramel">Caramel</button>
+          <button class="pill" data-name="Hazelnut">Hazelnut</button>
+          <button class="pill" data-name="Brown sugar">Brown sugar</button>
+          <button class="pill" data-name="Lavender">Lavender</button>
+          <button class="pill" data-name="Peppermint">Peppermint</button>
+          <button class="pill" data-name="Sugar-free vanilla">Sugar-free vanilla</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <label>Toppings <span class="ctrl-value">(pick any)</span></label>
+        <div class="pills" data-group="toppings" data-multi="true">
+          <button class="pill" data-name="Cinnamon dust">Cinnamon dust</button>
+          <button class="pill" data-name="Cocoa powder">Cocoa powder</button>
+          <button class="pill" data-name="Caramel drizzle">Caramel drizzle</button>
+          <button class="pill" data-name="Chocolate chips">Chocolate chips</button>
+          <button class="pill" data-name="Boba pearls">Boba pearls</button>
+          <button class="pill" data-name="Sea salt foam">Sea salt foam</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="ctrl-label-row">
+          <label>Extra espresso shots</label>
+        </div>
+        <div class="stepper">
+          <button id="shotMinus">−</button>
+          <span class="stepper-val" id="shotVal">0</span>
+          <button id="shotPlus">+</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="ctrl-label-row">
+          <label>Foam level</label>
+        </div>
+        <div class="pills" data-group="foam">
+          <button class="pill active" data-name="None">None</button>
+          <button class="pill" data-name="Light foam">Light</button>
+          <button class="pill" data-name="Extra foam">Extra</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Whipped cream</div>
+            <div class="toggle-sub">Piled on top, +45 cal</div>
+          </div>
+          <button class="switch" id="whipSwitch"></button>
+        </div>
+      </div>
+
+      <div class="ai-note">
+        <span>✨</span>
+        <div><b>AI insight —</b> <span id="aiNote">A balanced build: moderate sweetness with oat milk keeps this light while matcha brings steady, gentle energy.</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div>
+      <div class="eyebrow">Saved & reorder</div>
+      <h2>Your regulars, one tap away</h2>
+    </div>
+    <p class="section-note">Save any build. Reorder from your phone before you've left the door.</p>
+  </div>
+  <div class="cards">
+    <div class="card">
+      <svg viewBox="0 0 64 64"><path d="M14 20 H50 L46 54 Q32 60 18 54 Z" fill="#DCE6D5" stroke="#546B4E" stroke-width="2"/><path d="M50 24 Q60 24 58 34 Q56 42 48 40" fill="none" stroke="#546B4E" stroke-width="2"/></svg>
+      <h4>Monday reset</h4>
+      <p>Iced matcha, oat milk, half sweet, no whip.</p>
+      <div class="card-foot"><span>110 cal</span><button class="reorder">Reorder</button></div>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 64 64"><path d="M14 20 H50 L46 54 Q32 60 18 54 Z" fill="#E8D6C4" stroke="#7A5233" stroke-width="2"/><path d="M50 24 Q60 24 58 34 Q56 42 48 40" fill="none" stroke="#7A5233" stroke-width="2"/></svg>
+      <h4>Deadline brew</h4>
+      <p>Double cold brew, almond milk, unsweet, extra shot.</p>
+      <div class="card-foot"><span>45 cal</span><button class="reorder">Reorder</button></div>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 64 64"><path d="M14 20 H50 L46 54 Q32 60 18 54 Z" fill="#F0D3DA" stroke="#A6394F" stroke-width="2"/><path d="M50 24 Q60 24 58 34 Q56 42 48 40" fill="none" stroke="#A6394F" stroke-width="2"/></svg>
+      <h4>Slow Sunday</h4>
+      <p>Hibiscus refresher, full sweet, extra ice, boba.</p>
+      <div class="card-foot"><span>140 cal</span><button class="reorder">Reorder</button></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="ambience">
+    <div class="ambience-left">
+      <span style="font-size:26px;">🎧</span>
+      <div>
+        <h3>Café ambience</h3>
+        <p>Soft espresso-machine hiss and quiet chatter while you browse.</p>
+      </div>
+    </div>
+    <button class="sound-toggle" id="soundToggle">Play sound</button>
+  </div>
+</section>
+
+<footer>Pour — build, save, reorder. Your drink, remembered.</footer>
+
+<script>
+window.addEventListener('load', ()=>{
+  setTimeout(()=>document.getElementById('loader').classList.add('hide'), 1600);
+});
+
+const hour = new Date().getHours();
+const part = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+document.getElementById('greetingText').textContent = `${part}, Manaswini ☕`;
+
+const modeToggle = document.getElementById('modeToggle');
+modeToggle.addEventListener('click', ()=>{
+  const isDark = document.body.getAttribute('data-mode') === 'dark';
+  document.body.setAttribute('data-mode', isDark ? 'light' : 'dark');
+  modeToggle.textContent = isDark ? 'Dark mode' : 'Light mode';
+});
+
+document.querySelectorAll('.season-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.season-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.body.setAttribute('data-season', btn.dataset.season);
+  });
+});
+
+const soundToggle = document.getElementById('soundToggle');
+let playing = false;
+soundToggle.addEventListener('click', ()=>{
+  playing = !playing;
+  soundToggle.textContent = playing ? 'Pause sound' : 'Play sound';
+});
+
+/* ---------- Beverage base colors & pricing model ---------- */
+const beverageColor = {
+  'Coffee':'#7A5233', 'Tea':'#B5622D', 'Matcha':'#546B4E', 'Smoothie':'#D98EA1',
+  'Milkshake':'#E8D6C4', 'Hot Chocolate':'#5E3B1F', 'Refreshers':'#A6394F'
+};
+const beverageHasCaffeine = { 'Coffee':true,'Tea':true,'Matcha':true,'Smoothie':false,'Milkshake':false,'Hot Chocolate':false,'Refreshers':true };
+const beverageAllowsStrength = { 'Coffee':true,'Tea':true,'Matcha':true,'Smoothie':false,'Milkshake':false,'Hot Chocolate':false,'Refreshers':false };
+const basePrice = { 'Coffee':4.25,'Tea':4.00,'Matcha':4.75,'Smoothie':5.50,'Milkshake':5.75,'Hot Chocolate':4.50,'Refreshers':4.75 };
+const sizeMult = { 'Small':0.85, 'Medium':1, 'Large':1.25 };
+const sizeCal = { 'Small':0.8, 'Medium':1, 'Large':1.3 };
+
+const state = {
+  beverage: 'Matcha',
+  size: 'Medium',
+  temp: 'Iced',
+  sweet: 50,
+  ice: 'Regular ice',
+  milk: 'Oat',
+  strength: 'Regular',
+  syrups: [],
+  toppings: [],
+  shots: 0,
+  foam: 'None',
+  whip: false
+};
+
+const milkColors = { 'Oat':'#EDE0C8','Dairy':'#F5F0E4','Almond':'#E9E4D8','Soy':'#EFE7D6','Coconut':'#F0E9DA','None':null };
+
+function updateStrengthAvailability(){
+  const group = document.getElementById('strengthGroup');
+  const allowed = beverageAllowsStrength[state.beverage];
+  group.style.opacity = allowed ? '1' : '0.4';
+  group.querySelectorAll('.pill').forEach(p => p.disabled = !allowed);
+  document.getElementById('strengthHelper').textContent = allowed ? '' : `Strength doesn't apply to ${state.beverage.toLowerCase()}.`;
+}
+
+function updateIceAvailability(){
+  const iceGroup = document.querySelector('[data-group="ice"]');
+  const hot = state.temp === 'Hot';
+  iceGroup.style.opacity = hot ? '0.4' : '1';
+  iceGroup.querySelectorAll('.pill').forEach(p => p.disabled = hot);
+}
+
+function computeNutrition(){
+  let cal = 40; // shell base
+  const capMap = { 'Small':6,'Medium':8,'Large':10 };
+  cal += capMap[state.beverage] === undefined ? 0 : 0;
+
+  const bevBase = { 'Coffee':5,'Tea':5,'Matcha':45,'Smoothie':180,'Milkshake':320,'Hot Chocolate':180,'Refreshers':90 };
+  cal += bevBase[state.beverage];
+
+  const milkCal = { 'Oat':60,'Dairy':70,'Almond':30,'Soy':50,'Coconut':60,'None':0 };
+  cal += milkCal[state.milk];
+
+  cal += Math.round(state.sweet * 1.3); // sweetness contributes sugar-driven calories
+  cal += state.syrups.length * 20;
+  cal += state.toppings.length * 25;
+  cal += state.shots * 5;
+  if(state.whip) cal += 45;
+  if(state.foam === 'Light foam') cal += 10;
+  if(state.foam === 'Extra foam') cal += 20;
+
+  cal = Math.round(cal * sizeCal[state.size]);
+
+  let sugar = Math.round(state.sweet * 0.28) + state.syrups.length * 4 + state.toppings.length * 3;
+  if(state.beverage === 'Milkshake' || state.beverage === 'Smoothie') sugar += 12;
+  sugar = Math.round(sugar * sizeCal[state.size]);
+
+  let caffeine = 0;
+  if(beverageHasCaffeine[state.beverage]){
+    const strengthMult = { 'Mild':0.7,'Regular':1,'Strong':1.4,'Extra bold':1.8 };
+    const bevCaf = { 'Coffee':95,'Tea':45,'Matcha':55,'Refreshers':35 };
+    caffeine = Math.round((bevCaf[state.beverage] || 0) * (beverageAllowsStrength[state.beverage] ? strengthMult[state.strength] : 1));
+    caffeine += state.shots * 75;
+    caffeine = Math.round(caffeine * sizeCal[state.size]);
+  }
+
+  return { cal, sugar, caffeine };
+}
+
+function computePrice(){
+  let price = basePrice[state.beverage];
+  price *= sizeMult[state.size];
+  price += state.syrups.length * 0.65;
+  price += state.toppings.length * 0.75;
+  price += state.shots * 0.95;
+  if(state.whip) price += 0.65;
+  price += state.milk === 'None' ? 0 : (state.milk === 'Dairy' ? 0 : 0.70);
+  return price;
+}
+
+function aiInsight(){
+  const notes = [];
+  if(state.sweet >= 70) notes.push('this build leans sweet');
+  else if(state.sweet <= 20) notes.push('this is a low-sugar build');
+  else notes.push('sweetness sits at a balanced middle ground');
+
+  if(beverageHasCaffeine[state.beverage]){
+    const n = computeNutrition();
+    if(n.caffeine > 200) notes.push('caffeine is on the higher side, so pace yourself');
+    else if(n.caffeine < 60) notes.push('caffeine stays gentle');
+  } else {
+    notes.push('no caffeine here, good for an evening treat');
+  }
+
+  if(state.milk === 'None' && state.beverage !== 'Refreshers') notes.push('going milk-free keeps it light');
+  if(state.toppings.length + state.syrups.length >= 4) notes.push('lots of add-ons layered in, expect a richer flavor');
+
+  return notes.join('; ') + '.';
+}
+
+function renderGlass(){
+  const layersEl = document.getElementById('layers');
+  layersEl.innerHTML = '';
+  const milkColor = milkColors[state.milk];
+  const baseColor = beverageColor[state.beverage];
+
+  let y = 20;
+  if(milkColor && state.milk !== 'None'){
+    layersEl.innerHTML += `<rect x="0" y="${y}" width="120" height="55" fill="${milkColor}"/>`;
+    y += 55;
+  }
+  layersEl.innerHTML += `<rect x="0" y="${y}" width="120" height="${230-y}" fill="${baseColor}"/>`;
+
+  document.getElementById('foam-cap').style.opacity = state.foam === 'None' ? '0' : (state.foam === 'Light foam' ? '0.6' : '1');
+  document.getElementById('whip-cap').style.opacity = state.whip ? '1' : '0';
+
+  const tempWord = state.temp === 'Hot' ? 'hot' : 'iced';
+  const milkWord = state.milk === 'None' ? '' : state.milk.toLowerCase() + ' ';
+  const sweetWord = state.sweet === 0 ? 'unsweetened' : `${state.sweet}% sweet`;
+  const extras = [];
+  if(state.shots > 0) extras.push(`+${state.shots} shot${state.shots>1?'s':''}`);
+  if(state.whip) extras.push('whip');
+  if(state.syrups.length) extras.push(state.syrups.join(' + '));
+  if(state.toppings.length) extras.push(state.toppings.join(' + '));
+
+  let label = `${state.size.toLowerCase()} ${tempWord} ${milkWord}${state.beverage.toLowerCase()}, ${sweetWord}`;
+  if(extras.length) label += `, ${extras.join(', ')}`;
+  document.getElementById('glassLabel').textContent = label.replace(/\s+/g,' ').trim();
+
+  const n = computeNutrition();
+  document.getElementById('rCal').textContent = `${n.cal} cal`;
+  document.getElementById('rSugar').textContent = `${n.sugar} g`;
+  document.getElementById('rCaf').textContent = `${n.caffeine} mg`;
+  document.getElementById('rPrice').textContent = `$${computePrice().toFixed(2)}`;
+  document.getElementById('aiNote').textContent = aiInsight();
+
+  updateStrengthAvailability();
+  updateIceAvailability();
+}
+
+/* Single-select pill groups */
+document.querySelectorAll('.pills:not([data-multi])').forEach(group=>{
+  const key = group.dataset.group;
+  group.querySelectorAll('.pill').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(btn.disabled) return;
+      group.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      state[key] = btn.dataset.name;
+      renderGlass();
+    });
+  });
+});
+
+/* Multi-select pill groups (syrups, toppings) */
+document.querySelectorAll('.pills[data-multi="true"]').forEach(group=>{
+  const key = group.dataset.group;
+  group.querySelectorAll('.pill').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      btn.classList.toggle('active');
+      const name = btn.dataset.name;
+      if(btn.classList.contains('active')){
+        state[key].push(name);
+      } else {
+        state[key] = state[key].filter(n => n !== name);
+      }
+      renderGlass();
+    });
+  });
+});
+
+/* Sweetness slider */
+const sweetSlider = document.getElementById('sweetSlider');
+sweetSlider.addEventListener('input', ()=>{
+  state.sweet = parseInt(sweetSlider.value, 10);
+  document.getElementById('sweetVal').textContent = `${state.sweet}%`;
+  renderGlass();
+});
+
+/* Espresso shot stepper */
+const shotVal = document.getElementById('shotVal');
+document.getElementById('shotPlus').addEventListener('click', ()=>{
+  if(state.shots < 4){ state.shots++; shotVal.textContent = state.shots; renderGlass(); }
+});
+document.getElementById('shotMinus').addEventListener('click', ()=>{
+  if(state.shots > 0){ state.shots--; shotVal.textContent = state.shots; renderGlass(); }
+});
+
+/* Whipped cream toggle */
+const whipSwitch = document.getElementById('whipSwitch');
+whipSwitch.addEventListener('click', ()=>{
+  state.whip = !state.whip;
+  whipSwitch.classList.toggle('on', state.whip);
+  renderGlass();
+});
+
+renderGlass();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blend & Brew — Your Cup, Your Rules</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- Color Palette & Variables --- */
+        :root {
+            --bg-cream: #F4EFE6;
+            --card-white: #FFFFFF;
+            --accent-terracotta: #B05E2E;
+            --accent-hover: #964E24;
+            --dark-charcoal: #221813;
+            --border-light: #E2DCD3;
+            --text-muted: #70665F;
+            
+            /* Drink layer colors */
+            --matcha-green: #526E52;
+            --milk-creamy: #F5EFEB;
+            --coffee-brown: #5C4033;
+        }
+
+        /* --- Reset & Base Styles --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            color: var(--dark-charcoal);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* --- Main Container --- */
+        .container {
+            background: var(--card-white);
+            width: 1000px;
+            max-width: 100%;
+            min-height: 600px;
+            border-radius: 28px;
+            box-shadow: 0 15px 35px rgba(34, 24, 19, 0.05);
+            display: flex;
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+        }
+
+        /* --- Left Side: Drink Animation Panel --- */
+        .animation-panel {
+            flex: 1.1;
+            background: var(--bg-cream);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            border-right: 1px solid var(--border-light);
+        }
+
+        .brand-header {
+            text-align: center;
+            z-index: 2;
+        }
+
+        .brand-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--dark-charcoal);
+            margin-bottom: 6px;
+        }
+
+        .brand-tagline {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Glass Visualizer Container */
+        .glass-area {
+            position: relative;
+            width: 180px;
+            height: 280px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            margin: 40px 0;
+            z-index: 2;
+        }
+
+        /* The Glass Container */
+        .glass {
+            position: relative;
+            width: 130px;
+            height: 240px;
+            border: 4px solid var(--dark-charcoal);
+            border-top: none;
+            border-radius: 0 0 24px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column-reverse;
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.6);
+            transition: transform 0.2s ease;
+        }
+
+        /* Glass Rim */
+        .glass::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: var(--dark-charcoal);
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        /* Live Liquid Layers */
+        .liquid {
+            width: 100%;
+            height: 0%;
+            transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 1s ease;
+            position: relative;
+        }
+
+        .liquid-base {
+            background-color: var(--matcha-green);
+            z-index: 3;
+        }
+
+        .liquid-milk {
+            background-color: var(--milk-creamy);
+            z-index: 2;
+        }
+
+        .liquid-foam {
+            background-color: #E2D1C3;
+            z-index: 1;
+        }
+
+        /* Wavy motion for liquids */
+        .liquid::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 0;
+            width: 200%;
+            height: 12px;
+            background: inherit;
+            border-radius: 40%;
+            animation: wave 4s infinite linear;
+            filter: brightness(0.95);
+        }
+
+        @keyframes wave {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* Interactive Dropping Particles */
+        .particle {
+            position: absolute;
+            font-size: 24px;
+            pointer-events: none;
+            z-index: 1;
+            animation: fall 1.2s forwards cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-50px) rotate(0deg);
+                opacity: 1;
+            }
+            80% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(220px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Shake/Blending Effect */
+        .blend-shake {
+            animation: shake 0.5s infinite linear;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(0px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-1deg); }
+            85% { transform: translate(-1px, -1px) rotate(1deg); }
+            100% { transform: translate(2px, -2px) rotate(0deg); }
+        }
+
+        /* Dynamic Status Text */
+        .status-container {
+            text-align: center;
+            z-index: 2;
+        }
+
+        .status-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--dark-charcoal);
+            background: var(--card-white);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            display: inline-block;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+        }
+
+        /* --- Right Side: Login / Sign Up Form Panel --- */
+        .form-panel {
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--card-white);
+        }
+
+        /* Segmented Controller (Toggle between Sign In / Sign Up) */
+        .auth-toggle {
+            display: flex;
+            background: var(--bg-cream);
+            padding: 5px;
+            border-radius: 30px;
+            margin-bottom: 35px;
+            border: 1px solid var(--border-light);
+            position: relative;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 12px 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 25px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 1;
+        }
+
+        .toggle-btn.active {
+            color: var(--card-white);
+            background: var(--dark-charcoal);
+            box-shadow: 0 4px 10px rgba(34, 24, 19, 0.15);
+        }
+
+        /* Forms Layout */
+        .form-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--dark-charcoal);
+        }
+
+        .form-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 22px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--dark-charcoal);
+            margin-bottom: 8px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            background-color: var(--bg-cream);
+            font-size: 0.95rem;
+            color: var(--dark-charcoal);
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent-terracotta);
+            background-color: var(--card-white);
+            box-shadow: 0 0 0 4px rgba(176, 94, 46, 0.1);
+        }
+
+        /* Sign Up fields container for animated toggle */
+        .signup-fields {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease, margin-bottom 0.3s ease;
+        }
+
+        .signup-fields.show {
+            max-height: 120px; /* Adjust based on form field height */
+            opacity: 1;
+            margin-bottom: 0px;
+        }
+
+        /* --- Buttons & Animations --- */
+        .btn-primary {
+            width: 100%;
+            background-color: var(--accent-terracotta);
+            color: var(--card-white);
+            border: none;
+            padding: 16px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(176, 94, 46, 0.2);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(176, 94, 46, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        /* Simple button micro-animation */
+        .btn-primary span {
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+        .btn-primary:hover span {
+            transform: translateX(4px);
+        }
+
+        /* Footer links */
+        .form-footer {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .form-footer a {
+            color: var(--accent-terracotta);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .form-footer a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+                width: 100%;
+                max-width: 450px;
+                min-height: auto;
+            }
+            .animation-panel {
+                border-right: none;
+                border-bottom: 1px solid var(--border-light);
+                padding: 30px 20px;
+            }
+            .glass-area {
+                height: 200px;
+                margin: 20px 0;
+            }
+            .glass {
+                width: 110px;
+                height: 180px;
+            }
+            .form-panel {
+                padding: 35px 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="animation-panel">
+            <div class="brand-header">
+                <div class="brand-title">Blend & Brew</div>
+                <div class="brand-tagline">Your cup, your rules</div>
+            </div>
+
+            <div class="glass-area">
+                <div id="spawner-boundary" style="position: absolute; top: -100px; width: 100%; height: 100%;"></div>
+                
+                <div class="glass" id="drink-glass">
+                    <div class="liquid liquid-foam" id="layer-foam"></div>
+                    <div class="liquid liquid-milk" id="layer-milk"></div>
+                    <div class="liquid liquid-base" id="layer-base"></div>
+                </div>
+            </div>
+
+            <div class="status-container">
+                <span class="status-text" id="recipe-status">Starting up the blender...</span>
+            </div>
+        </div>
+
+        <div class="form-panel">
+            <div class="auth-toggle">
+                <button type="button" class="toggle-btn active" id="btn-signin-toggle">Sign In</button>
+                <button type="button" class="toggle-btn" id="btn-signup-toggle">Sign Up</button>
+            </div>
+
+            <h2 class="form-title" id="form-heading">Welcome back</h2>
+            <p class="form-subtitle" id="form-subheading">Sign in to customize your favorite blends.</p>
+
+            <form id="auth-form" onsubmit="handleFormSubmit(event)">
+                <div class="input-group">
+                    <label for="username">Username or Email</label>
+                    <input type="text" id="username" placeholder="hello@blendbrew.com" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+
+                <div class="signup-fields" id="signup-extra">
+                    <div class="input-group">
+                        <label for="confirm-password">Confirm Password</label>
+                        <input type="password" id="confirm-password" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" id="submit-btn">
+                    <span id="btn-text">Pour In</span>
+                    <span>&rarr;</span>
+                </button>
+            </form>
+
+            <div class="form-footer">
+                <span id="footer-text">Don't have an account?</span> 
+                <a href="#" id="footer-link">Create one now</a>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Form Switch Mechanics ---
+        const btnSignInToggle = document.getElementById('btn-signin-toggle');
+        const btnSignUpToggle = document.getElementById('btn-signup-toggle');
+        const formHeading = document.getElementById('form-heading');
+        const formSubheading = document.getElementById('form-subheading');
+        const signupExtra = document.getElementById('signup-extra');
+        const confirmPasswordInput = document.getElementById('confirm-password');
+        const submitBtnText = document.getElementById('btn-text');
+        const footerText = document.getElementById('footer-text');
+        const footerLink = document.getElementById('footer-link');
+
+        function setFormState(isSignUp) {
+            if (isSignUp) {
+                btnSignUpToggle.classList.add('active');
+                btnSignInToggle.classList.remove('active');
+                formHeading.textContent = "Create Account";
+                formSubheading.textContent = "Start tailoring your customized shakes and coffees.";
+                signupExtra.classList.add('show');
+                confirmPasswordInput.setAttribute('required', 'true');
+                submitBtnText.textContent = "Start Crafting";
+                footerText.textContent = "Already a member?";
+                footerLink.textContent = "Sign in here";
+            } else {
+                btnSignInToggle.classList.add('active');
+                btnSignUpToggle.classList.remove('active');
+                formHeading.textContent = "Welcome back";
+                formSubheading.textContent = "Sign in to customize your favorite blends.";
+                signupExtra.classList.remove('show');
+                confirmPasswordInput.removeAttribute('required');
+                submitBtnText.textContent = "Pour In";
+                footerText.textContent = "Don't have an account?";
+                footerLink.textContent = "Create one now";
+            }
+        }
+
+        btnSignInToggle.addEventListener('click', () => setFormState(false));
+        btnSignUpToggle.addEventListener('click', () => setFormState(true));
+        footerLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isCurrentlySignIn = btnSignInToggle.classList.contains('active');
+            setFormState(isCurrentlySignIn);
+        });
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            alert('Form submitted! Pouring your customized experience.');
+        }
+
+        // --- Live Shake-Making Loop Animation Script ---
+        const glass = document.getElementById('drink-glass');
+        const layerBase = document.getElementById('layer-base');
+        const layerMilk = document.getElementById('layer-milk');
+        const layerFoam = document.getElementById('layer-foam');
+        const recipeStatus = document.getElementById('recipe-status');
+        const spawnerBoundary = document.getElementById('spawner-boundary');
+
+        const animationPhases = [
+            {
+                name: "clean",
+                duration: 2000,
+                status: "Rinsing your cup...",
+                action: () => {
+                    layerBase.style.height = "0%";
+                    layerMilk.style.height = "0%";
+                    layerFoam.style.height = "0%";
+                    glass.classList.remove('blend-shake');
+                }
+            },
+            {
+                name: "base",
+                duration: 4000,
+                status: "Pouring customized Matcha base...",
+                action: () => {
+                    layerBase.style.backgroundColor = "var(--matcha-green)";
+                    layerBase.style.height = "40%";
+                    // Rain down green tea / coffee bean elements
+                    spawnParticles('🍃', 12);
+                }
+            },
+            {
+                name: "milk",
+                duration: 4000,
+                status: "Adding creamy oat milk...",
+                action: () => {
+                    layerMilk.style.height = "35%";
+                    spawnParticles('🥛', 10);
+                }
+            },
+            {
+                name: "toppings",
+                duration: 4000,
+                status: "Topping with fresh strawberries & sweet syrup...",
+                action: () => {
+                    layerFoam.style.height = "15%";
+                    spawnParticles('🍓', 8);
+                }
+            },
+            {
+                name: "blend",
+                duration: 3000,
+                status: "Blending your custom recipe!",
+                action: () => {
+                    glass.classList.add('blend-shake');
+                    // Simulating physical blending color mix
+                    setTimeout(() => {
+                        layerBase.style.backgroundColor = "#728863"; // Swirled green
+                        layerMilk.style.backgroundColor = "#DFD5C6"; // Swirled milk cream
+                    }, 1000);
+                }
+            },
+            {
+                name: "ready",
+                duration: 4000,
+                status: "Your customized Blend is ready! Enjoy!",
+                action: () => {
+                    glass.classList.remove('blend-shake');
+                    spawnParticles('✨', 6);
+                }
+            }
+        ];
+
+        let currentPhaseIndex = 0;
+
+        function playNextPhase() {
+            const phase = animationPhases[currentPhaseIndex];
+            recipeStatus.textContent = phase.status;
+            phase.action();
+
+            setTimeout(() => {
+                currentPhaseIndex = (currentPhaseIndex + 1) % animationPhases.length;
+                playNextPhase();
+            }, phase.duration);
+        }
+
+        // Particle Spawning Utility
+        function spawnParticles(emoji, count) {
+            let delay = 0;
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.textContent = emoji;
+                    
+                    // Random horizontal alignment within the glass' width profile
+                    const randomX = Math.random() * 100 + 40; 
+                    particle.style.left = `${randomX}px`;
+                    particle.style.top = `0px`;
+
+                    spawnerBoundary.appendChild(particle);
+
+                    // Remove after falling animation completes
+                    particle.addEventListener('animationend', () => {
+                        particle.remove();
+                    });
+                }, delay);
+                delay += 180 + Math.random() * 100;
+            }
+        }
+
+        // Initialize the animated loop
+        window.addEventListener('DOMContentLoaded', () => {
+            playNextPhase();
+        });
+    </script>
+</body>
+</html>

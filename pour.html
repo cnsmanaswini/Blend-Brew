@@ -681,6 +681,8 @@
 
 <footer>Pour — build, save, reorder. Your drink, remembered.</footer>
 
+<div class="toast-container" id="toastContainer"></div>
+
 <script>
 window.addEventListener('load', ()=>{
   setTimeout(()=>document.getElementById('loader').classList.add('hide'), 1600);
@@ -861,6 +863,7 @@ function renderGlass(){
 
   updateStrengthAvailability();
   updateIceAvailability();
+  if(typeof renderQR === 'function') renderQR();
 }
 
 /* Single-select pill groups */
@@ -969,6 +972,7 @@ function applyBuild(build){
   });
   syncUIFromState();
   renderGlass();
+  if(typeof trackRecentlyViewed === 'function') trackRecentlyViewed({...state, syrups:[...state.syrups], toppings:[...state.toppings]});
   document.getElementById('builderSection').scrollIntoView({behavior:'smooth'});
 }
 
@@ -1243,6 +1247,177 @@ document.getElementById('saveRecipeBtn').addEventListener('click', () => {
 });
 
 renderMyRecipes();
+
+/* ---------- Toasts ---------- */
+function toast(msg){
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 350);
+  }, 2200);
+}
+
+/* ---------- Order history ---------- */
+const historyTimeLabels = ['2 weeks ago','1 week ago','5 days ago','3 days ago','Yesterday','Today'];
+let orderLog = orderHistory.map((b, i) => ({
+  id: 'h' + i,
+  build: b,
+  time: historyTimeLabels[i] || `${i+1} orders ago`,
+  favorited: i === orderHistory.length - 1
+})).reverse();
+
+function logOrder(build, timeLabel){
+  orderLog.unshift({
+    id: 'h' + Date.now(),
+    build: { ...build, syrups: [...(build.syrups||[])], toppings: [...(build.toppings||[])] },
+    time: timeLabel || 'Just now',
+    favorited: false
+  });
+  if(orderLog.length > 12) orderLog.pop();
+  renderHistory();
+  renderFavorites();
+}
+
+function renderHistory(){
+  const list = document.getElementById('historyList');
+  list.innerHTML = orderLog.map(h => `
+    <div class="history-item">
+      ${drinkIconSvg(beverageColor[h.build.beverage])}
+      <div class="history-text"><b>${describeBuild(h.build)}</b><span>${h.time}</span></div>
+      <div class="history-actions">
+        <button class="star-btn ${h.favorited ? 'on' : ''}" data-id="${h.id}" title="Favorite">${h.favorited ? '★' : '☆'}</button>
+        <button class="mini-reorder" data-id="${h.id}">Reorder</button>
+      </div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.star-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const entry = orderLog.find(h => h.id === btn.dataset.id);
+      if(!entry) return;
+      entry.favorited = !entry.favorited;
+      renderHistory();
+      renderFavorites();
+    });
+  });
+  list.querySelectorAll('.mini-reorder').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const entry = orderLog.find(h => h.id === btn.dataset.id);
+      if(!entry) return;
+      applyBuild(entry.build);
+      logOrder(entry.build, 'Just now');
+      toast('Reordered — on its way');
+    });
+  });
+}
+
+function renderFavorites(){
+  const favs = orderLog.filter(h => h.favorited);
+  const wrap = document.getElementById('favWrap');
+  if(favs.length === 0){
+    wrap.innerHTML = `<div class="empty-fav">No favorites yet — tap ★ next to any order in your history.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="fav-grid">${favs.map(h => `
+    <div class="fav-card">
+      <div class="fav-card-top">
+        ${drinkIconSvg(beverageColor[h.build.beverage])}
+        <button class="star-btn on" data-id="${h.id}" title="Unfavorite">★</button>
+      </div>
+      <div><b>${h.build.beverage}</b><span>${describeBuild(h.build)}</span></div>
+      <button class="load-btn" data-id="${h.id}" style="width:100%;">Load</button>
+    </div>
+  `).join('')}</div>`;
+
+  wrap.querySelectorAll('.star-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const entry = orderLog.find(h => h.id === btn.dataset.id);
+      if(!entry) return;
+      entry.favorited = false;
+      renderHistory();
+      renderFavorites();
+    });
+  });
+  wrap.querySelectorAll('.load-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const entry = orderLog.find(h => h.id === btn.dataset.id);
+      if(entry) applyBuild(entry.build);
+    });
+  });
+}
+
+/* ---------- QR code ---------- */
+function renderQR(){
+  const data = `Pour recipe — ${describeBuild(state)}`;
+  const encoded = encodeURIComponent(data);
+  document.getElementById('qrBox').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${encoded}" alt="QR code for your current drink build" loading="lazy">`;
+  document.getElementById('qrCaption').textContent = `Encodes: ${describeBuild(state)}`;
+}
+
+document.getElementById('scanBtn').addEventListener('click', () => {
+  const scanToast = document.getElementById('scanToast');
+  scanToast.textContent = `Scanned ✅ — "${describeBuild(state)}" sent to the register. Ready in ~4 minutes.`;
+  scanToast.classList.add('show');
+  logOrder({ ...state, syrups: [...state.syrups], toppings: [...state.toppings] }, 'Just now');
+  toast('Order sent to café');
+  setTimeout(() => scanToast.classList.remove('show'), 4000);
+});
+
+/* ---------- Recently viewed ---------- */
+let recentlyViewed = [];
+function trackRecentlyViewed(build){
+  const label = describeBuild(build);
+  recentlyViewed = recentlyViewed.filter(r => describeBuild(r.build) !== label);
+  recentlyViewed.unshift({ id: 'v' + Date.now(), build: { ...build, syrups: [...(build.syrups||[])], toppings: [...(build.toppings||[])] } });
+  if(recentlyViewed.length > 8) recentlyViewed.pop();
+  renderRecentlyViewed();
+}
+
+function renderRecentlyViewed(){
+  const strip = document.getElementById('recentStrip');
+  if(recentlyViewed.length === 0){
+    strip.innerHTML = `<p class="helper" style="margin:0;">Nothing viewed yet — load a build from any suggestion or recipe above.</p>`;
+    return;
+  }
+  strip.innerHTML = recentlyViewed.map(r => `
+    <div class="recent-chip" data-id="${r.id}">
+      ${drinkIconSvg(beverageColor[r.build.beverage])}
+      <b>${r.build.beverage}</b>
+      <span>${r.build.size} · ${r.build.temp.toLowerCase()}</span>
+    </div>
+  `).join('');
+  strip.querySelectorAll('.recent-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const entry = recentlyViewed.find(r => r.id === chip.dataset.id);
+      if(entry) applyBuild(entry.build);
+    });
+  });
+}
+
+/* ---------- Wire preset "Saved & reorder" cards to real builds ---------- */
+const presetCardBuilds = [
+  { beverage:'Matcha', size:'Medium', temp:'Iced', sweet:50, ice:'Regular ice', milk:'Oat', strength:'Regular', syrups:[], toppings:[], shots:0, foam:'None', whip:false },
+  { beverage:'Coffee', size:'Medium', temp:'Iced', sweet:0, ice:'Regular ice', milk:'Almond', strength:'Extra bold', syrups:[], toppings:[], shots:1, foam:'None', whip:false },
+  { beverage:'Refreshers', size:'Medium', temp:'Iced', sweet:100, ice:'Extra ice', milk:'None', strength:'Regular', syrups:[], toppings:['Boba pearls'], shots:0, foam:'None', whip:false }
+];
+document.querySelectorAll('.cards .reorder').forEach((btn, i) => {
+  btn.addEventListener('click', () => {
+    const build = presetCardBuilds[i];
+    if(!build) return;
+    applyBuild(build);
+    logOrder(build, 'Just now');
+    toast('One-tap reorder placed');
+  });
+});
+
+renderHistory();
+renderFavorites();
+renderRecentlyViewed();
 renderGlass();
 </script>
 
